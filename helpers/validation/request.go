@@ -17,14 +17,32 @@ func RequestBody(handler *validator.Validate, body interface{}) interface{} {
 		return nil
 	}
 
-	errorFields := err.(validator.ValidationErrors)
-	var invalid []*InvalidSchema
+	// Check if the error is of type validator.ValidationErrors
+	if validationErrors, ok := err.(validator.ValidationErrors); ok {
+		var invalid []*InvalidSchema
 
-	for _, errorField := range errorFields {
-		invalid = append(invalid, &InvalidSchema{
-			Field:   errorField.Field(),
-			Message: fmt.Sprintf("invalid '%s' with value '%v'", errorField.Field(), errorField.Value()),
-		})
+		for _, errorField := range validationErrors {
+			invalid = append(invalid, &InvalidSchema{
+				Field:   errorField.Field(),
+				Message: fmt.Sprintf("invalid '%s' with value '%v'", errorField.Field(), errorField.Value()),
+			})
+		}
+		return invalid
 	}
-	return invalid
+
+	if invalidValidationError, ok := err.(*validator.InvalidValidationError); ok {
+		return []*InvalidSchema{
+			{
+				Field:   "InvalidValidationError",
+				Message: invalidValidationError.Error(),
+			},
+		}
+	}
+
+	return []*InvalidSchema{
+		{
+			Field:   "UnknownError",
+			Message: err.Error(),
+		},
+	}
 }
