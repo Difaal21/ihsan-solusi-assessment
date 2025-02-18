@@ -38,7 +38,7 @@ func NewHTTPHandler(router *echo.Echo, logger *logrus.Logger, validate *validato
 
 func (handler *HTTPHandler) Registration(c echo.Context) error {
 	var ctx = c.Request().Context()
-	var payload *dto.UserLoginRequest
+	var payload *dto.UserRegistration
 
 	logId, _ := uuid.NewV7()
 	ctx = context.WithValue(ctx, constants.LogContextKey, logId)
@@ -63,5 +63,5 @@ func (handler *HTTPHandler) Registration(c echo.Context) error {
 		return responses.REST(c, httpResponse)
 	}
 
-	return responses.REST(c, handler.usecase.Login(ctx, payload))
+	return responses.REST(c, handler.usecase.Registration(ctx, payload))
 }
