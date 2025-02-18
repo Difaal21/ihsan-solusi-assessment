@@ -41,6 +41,7 @@ func main() {
 
 	router := echo.New()
 	router.GET("/ihsan-solusi-assessment", index)
+	router.RouteNotFound("/*", notFoundHandler)
 
 	usersRepo := repositories.NewUserRepository(logger, pdb)
 	usersUsecase := users.NewUseCase(logger, usersRepo)
