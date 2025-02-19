@@ -2,7 +2,10 @@ package financialaccounts
 
 import (
 	"context"
+	"difaal21/ihsan-solusi-assessment/constants"
 	"difaal21/ihsan-solusi-assessment/dto"
+	"difaal21/ihsan-solusi-assessment/exceptions"
+	"difaal21/ihsan-solusi-assessment/messages"
 	"difaal21/ihsan-solusi-assessment/repositories"
 	"difaal21/ihsan-solusi-assessment/responses"
 
@@ -16,10 +19,10 @@ type Usecase interface {
 
 type UsecaseImpl struct {
 	logger     *logrus.Logger
-	repository repositories.UserRepository
+	repository repositories.FinancialAccountRepository
 }
 
-func NewUseCase(logger *logrus.Logger, repo repositories.UserRepository) Usecase {
+func NewUseCase(logger *logrus.Logger, repo repositories.FinancialAccountRepository) Usecase {
 	return &UsecaseImpl{
 		logger:     logger,
 		repository: repo,
@@ -27,6 +30,24 @@ func NewUseCase(logger *logrus.Logger, repo repositories.UserRepository) Usecase
 }
 
 func (u *UsecaseImpl) Credit(ctx context.Context, param *dto.Credit) responses.Responses {
+
+	financialAccount, err := u.repository.GetOneByUniqueField(ctx, "fa.bank_account_number", param.BankAccountNumber)
+	if err != nil {
+		if err == exceptions.ErrNotFound {
+			u.logger.WithField("log", ctx.Value(constants.LogContextKey)).Error(err)
+			return httpResponse.NotFound("").SetData(exceptions.LogError{ID: ctx.Value(constants.LogContextKey)}).SetMessage(messages.Common["not_found"]).Send()
+		}
+		u.logger.WithField("log", ctx.Value(constants.LogContextKey)).Error(err)
+		return httpResponse.InternalServerError("").SetData(exceptions.LogError{ID: ctx.Value(constants.LogContextKey)}).SetMessage(messages.Common["internal_server_error"]).Send()
+	}
+
+	totalAmount := financialAccount.Balance + param.Amount
+
+	err = u.repository.Credit(ctx, param.BankAccountNumber, totalAmount)
+	if err != nil {
+		u.logger.WithField("log", ctx.Value(constants.LogContextKey)).Error(err)
+		return httpResponse.InternalServerError("").SetData(exceptions.LogError{ID: ctx.Value(constants.LogContextKey)}).SetMessage(messages.Common["internal_server_error"]).Send()
+	}
 
 	return httpResponse.Ok("").SetData(nil).SetMessage("").Send()
 }

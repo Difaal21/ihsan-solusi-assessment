@@ -30,7 +30,7 @@ func NewHTTPHandler(router *echo.Echo, logger *logrus.Logger, validate *validato
 	}
 
 	router.POST("/ihsan-solusi-assessment/v1/tabung", handler.Credit)
-	router.POST("/ihsan-solusi-assessment/v1/tarik", handler.Debit)
+	// router.POST("/ihsan-solusi-assessment/v1/tarik", handler.Debit)
 	// router.GET("/ihsan-solusi-assessment/v1/saldo", handler.CheckBalance)
 }
 
@@ -63,7 +63,6 @@ func (handler *HTTPHandler) Credit(c echo.Context) error {
 
 	return responses.REST(c, handler.usecase.Credit(ctx, payload))
 }
-
 func (handler *HTTPHandler) Debit(c echo.Context) error {
 	var ctx = c.Request().Context()
 	var payload *dto.Credit

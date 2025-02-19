@@ -3,6 +3,7 @@ package main
 import (
 	"difaal21/ihsan-solusi-assessment/config"
 	"difaal21/ihsan-solusi-assessment/database/postgresql"
+	financialaccounts "difaal21/ihsan-solusi-assessment/modules/financial_accounts"
 	"difaal21/ihsan-solusi-assessment/modules/users"
 	"difaal21/ihsan-solusi-assessment/repositories"
 	"difaal21/ihsan-solusi-assessment/responses"
@@ -44,6 +45,8 @@ func main() {
 	router.RouteNotFound("/*", notFoundHandler)
 
 	financialAccountRepo := repositories.NewFinancialAccountRepository(logger, pdb)
+	financialAccountUsecase := financialaccounts.NewUseCase(logger, financialAccountRepo)
+	financialaccounts.NewHTTPHandler(router, logger, validate, financialAccountUsecase)
 
 	usersRepo := repositories.NewUserRepository(logger, pdb, financialAccountRepo)
 	usersUsecase := users.NewUseCase(logger, usersRepo)

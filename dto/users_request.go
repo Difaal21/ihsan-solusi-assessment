@@ -11,11 +11,11 @@ type UserRegistration struct {
 }
 
 type Credit struct {
-	BankAccountNumber int64 `json:"no_rekening" validate:"required"`
-	Amount            int64 `json:"amount" validate:"required"`
+	BankAccountNumber string  `json:"no_rekening" validate:"required"`
+	Amount            float64 `json:"nominal" validate:"required"`
 }
 
 type Debit struct {
-	BankAccountNumber int64 `json:"no_rekening" validate:"required"`
-	Amount            int64 `json:"amount" validate:"required"`
+	BankAccountNumber string  `json:"no_rekening" validate:"required"`
+	Amount            float64 `json:"nominal" validate:"required"`
 }
