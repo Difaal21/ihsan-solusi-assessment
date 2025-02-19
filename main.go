@@ -43,7 +43,9 @@ func main() {
 	router.GET("/ihsan-solusi-assessment", index)
 	router.RouteNotFound("/*", notFoundHandler)
 
-	usersRepo := repositories.NewUserRepository(logger, pdb)
+	financialAccountRepo := repositories.NewFinancialAccountRepository(logger, pdb)
+
+	usersRepo := repositories.NewUserRepository(logger, pdb, financialAccountRepo)
 	usersUsecase := users.NewUseCase(logger, usersRepo)
 	users.NewHTTPHandler(router, logger, validate, usersUsecase)
 

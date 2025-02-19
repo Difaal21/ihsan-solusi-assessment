@@ -7,6 +7,7 @@ import (
 	"difaal21/ihsan-solusi-assessment/entities"
 	"difaal21/ihsan-solusi-assessment/exceptions"
 	"fmt"
+	"math/rand"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -23,17 +24,24 @@ type UserRepository interface {
 }
 
 type UserRepositoryImpl struct {
-	logger    *logrus.Logger
-	db        *sql.DB
-	tableName string
+	logger                     *logrus.Logger
+	db                         *sql.DB
+	tableName                  string
+	financialAccountRepository FinancialAccountRepository
 }
 
-func NewUserRepository(logger *logrus.Logger, db *sql.DB) UserRepository {
+func NewUserRepository(logger *logrus.Logger, db *sql.DB, financialAccountRepo FinancialAccountRepository) UserRepository {
 	return &UserRepositoryImpl{
-		logger:    logger,
-		db:        db,
-		tableName: "users",
+		logger:                     logger,
+		db:                         db,
+		tableName:                  "users",
+		financialAccountRepository: financialAccountRepo,
 	}
+}
+
+func generateBankAccountNumber() string {
+	accountNumber := rand.Int63n(1e12) // Generate a random 12-digit number
+	return fmt.Sprintf("%012d", accountNumber)
 }
 
 func (r *UserRepositoryImpl) Registration(ctx context.Context, user *entities.Users) (err error) {
@@ -56,7 +64,20 @@ func (r *UserRepositoryImpl) Registration(ctx context.Context, user *entities.Us
 		}
 	}()
 
-	_, err = r.Insert(ctx, tx, user)
+	userId, err := r.Insert(ctx, tx, user)
+	if err != nil {
+		r.logger.WithField("log", ctx.Value(constants.LogContextKey)).Error(err)
+		return
+	}
+
+	financialAccount := &entities.FinancialAccount{
+		UserID:            userId,
+		Balance:           0,
+		BankAccountNumber: generateBankAccountNumber(),
+		CreatedAt:         user.CreatedAt,
+	}
+
+	_, err = r.financialAccountRepository.Insert(ctx, tx, financialAccount)
 	if err != nil {
 		r.logger.WithField("log", ctx.Value(constants.LogContextKey)).Error(err)
 		return
