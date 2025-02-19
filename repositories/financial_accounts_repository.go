@@ -16,8 +16,7 @@ import (
 
 type FinancialAccountRepository interface {
 	GetOneByUniqueField(ctx context.Context, field string, value any) (user *entities.FinancialAccount, err error)
-	Credit(ctx context.Context, bankAccountNumber string, totalAmount float64) (err error)
-	// Debit(ctx context.Context, tx *sql.Tx, bankAccountNumber string, amount int64) (err error)
+	UpdateBalance(ctx context.Context, bankAccountNumber string, totalAmount float64) (err error)
 
 	Update(ctx context.Context, tx *sql.Tx, column_name string, uniqueField any, updateFields map[string]any) (err error)
 	Insert(ctx context.Context, tx *sql.Tx, financialAccount *entities.FinancialAccount) (id int64, err error)
@@ -37,7 +36,7 @@ func NewFinancialAccountRepository(logger *logrus.Logger, db *sql.DB) FinancialA
 	}
 }
 
-func (r *FinancialAccountRepositoryImpl) Credit(ctx context.Context, bankAccountNumber string, totalAmount float64) (err error) {
+func (r *FinancialAccountRepositoryImpl) UpdateBalance(ctx context.Context, bankAccountNumber string, totalAmount float64) (err error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		r.logger.WithField("log", ctx.Value(constants.LogContextKey)).Error(err)
