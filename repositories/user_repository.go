@@ -10,58 +10,100 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
-	"github.com/stephenafamo/bob/dialect/mysql"
-	"github.com/stephenafamo/bob/dialect/mysql/sm"
+	"github.com/stephenafamo/bob/dialect/psql"
+	"github.com/stephenafamo/bob/dialect/psql/sm"
 )
 
 type UserRepository interface {
-	GetOneUserByUniqueField(ctx context.Context, field string, value any) (user entities.Users, err error)
+	GetOneUserByUniqueField(ctx context.Context, field string, value any) (user *entities.Users, err error)
+	Registration(ctx context.Context, users *entities.Users) (err error)
+
 	Update(ctx context.Context, tx *sql.Tx, tableName string, id int64, updateFields map[string]any) (err error)
-	EnableMFATOTP(ctx context.Context, userId int64, data map[string]any) (err error)
+	Insert(ctx context.Context, tx *sql.Tx, users *entities.Users) (rowAffected int64, err error)
 }
 
 type UserRepositoryImpl struct {
-	logger *logrus.Logger
-	db     *sql.DB
+	logger    *logrus.Logger
+	db        *sql.DB
+	tableName string
 }
 
 func NewUserRepository(logger *logrus.Logger, db *sql.DB) UserRepository {
 	return &UserRepositoryImpl{
-		logger: logger,
-		db:     db,
+		logger:    logger,
+		db:        db,
+		tableName: "users",
 	}
 }
 
-func (r *UserRepositoryImpl) EnableMFATOTP(ctx context.Context, userId int64, data map[string]any) (err error) {
-
-	tx, err := r.db.Begin()
+func (r *UserRepositoryImpl) Registration(ctx context.Context, user *entities.Users) (err error) {
+	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		r.logger.WithField("log", ctx.Value(constants.LogContextKey)).Error(err)
-		return exceptions.ErrInternalServerError
+		return
 	}
 
-	err = r.Update(ctx, tx, "users_account", userId, data)
-	if err != nil {
-		tx.Rollback()
-		r.logger.WithField("log", ctx.Value(constants.LogContextKey)).Error(err)
-		return exceptions.ErrInternalServerError
-	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+			return
+		}
 
-	err = tx.Commit()
+		err = tx.Commit()
+		if err != nil {
+			r.logger.WithField("log", ctx.Value(constants.LogContextKey)).Error(err)
+			return
+		}
+	}()
+
+	_, err = r.Insert(ctx, tx, user)
 	if err != nil {
 		r.logger.WithField("log", ctx.Value(constants.LogContextKey)).Error(err)
-		return exceptions.ErrInternalServerError
+		return
 	}
 
 	return
 }
 
-func (r *UserRepositoryImpl) GetOneUserByUniqueField(ctx context.Context, field string, value any) (user entities.Users, err error) {
+func (r *UserRepositoryImpl) Insert(ctx context.Context, tx *sql.Tx, user *entities.Users) (rowAffected int64, err error) {
+
+	command := fmt.Sprintf(`
+    INSERT INTO %s (
+        name,
+        phone_number,
+        nationality_id,
+        created_at,
+        balance
+    ) VALUES ($1, $2, $3, $4, $5)
+    `, r.tableName)
+
+	result, err := tx.ExecContext(ctx, command, user.Name, user.PhoneNumber, user.NationalityID, user.CreatedAt, user.Balance)
+	if err != nil {
+		r.logger.WithFields(logrus.Fields{
+			"log":   ctx.Value(constants.LogContextKey),
+			"query": command,
+		}).Error(err)
+		return
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return
+	}
+
+	if rowsAffected == 1 {
+		return
+	}
+
+	return
+}
+
+func (r *UserRepositoryImpl) GetOneUserByUniqueField(ctx context.Context, field string, value any) (user *entities.Users, err error) {
 
 	q := buildUserQuery()
 
 	if field != "" && value != "" {
-		q.Apply(sm.Where(mysql.Raw(field).EQ(mysql.Arg(value))))
+		q.Apply(sm.Where(psql.Raw(field).EQ(psql.Arg(value))))
 	}
 
 	query, args, err := q.Build(ctx)
@@ -73,10 +115,12 @@ func (r *UserRepositoryImpl) GetOneUserByUniqueField(ctx context.Context, field 
 	row := r.db.QueryRowContext(ctx, query, args...)
 	user, err = scanUser(row)
 	if err != nil {
+		if err == exceptions.ErrNotFound {
+			return
+		}
 		r.logger.WithFields(logrus.Fields{"log": ctx.Value(constants.LogContextKey), "query": query}).Error(err)
 		return
 	}
-
 	return
 }
 
