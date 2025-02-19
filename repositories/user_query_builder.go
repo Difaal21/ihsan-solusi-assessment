@@ -15,7 +15,6 @@ func buildUserQuery() bob.BaseQuery[*dialect.SelectQuery] {
 			"u.phone_number",
 			"u.nationality_id",
 			"u.created_at",
-			"u.balance",
 		),
 		sm.From("users").As("u"),
 	)

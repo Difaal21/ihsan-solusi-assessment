@@ -19,7 +19,7 @@ type UserRepository interface {
 	Registration(ctx context.Context, users *entities.Users) (err error)
 
 	Update(ctx context.Context, tx *sql.Tx, tableName string, id int64, updateFields map[string]any) (err error)
-	Insert(ctx context.Context, tx *sql.Tx, users *entities.Users) (rowAffected int64, err error)
+	Insert(ctx context.Context, tx *sql.Tx, users *entities.Users) (id int64, err error)
 }
 
 type UserRepositoryImpl struct {
@@ -65,19 +65,19 @@ func (r *UserRepositoryImpl) Registration(ctx context.Context, user *entities.Us
 	return
 }
 
-func (r *UserRepositoryImpl) Insert(ctx context.Context, tx *sql.Tx, user *entities.Users) (rowAffected int64, err error) {
+func (r *UserRepositoryImpl) Insert(ctx context.Context, tx *sql.Tx, user *entities.Users) (id int64, err error) {
 
 	command := fmt.Sprintf(`
     INSERT INTO %s (
         name,
         phone_number,
         nationality_id,
-        created_at,
-        balance
-    ) VALUES ($1, $2, $3, $4, $5)
+        created_at
+    ) VALUES ($1, $2, $3, $4)
+		RETURNING id
     `, r.tableName)
 
-	result, err := tx.ExecContext(ctx, command, user.Name, user.PhoneNumber, user.NationalityID, user.CreatedAt, user.Balance)
+	result := tx.QueryRowContext(ctx, command, user.Name, user.PhoneNumber, user.NationalityID, user.CreatedAt)
 	if err != nil {
 		r.logger.WithFields(logrus.Fields{
 			"log":   ctx.Value(constants.LogContextKey),
@@ -86,16 +86,12 @@ func (r *UserRepositoryImpl) Insert(ctx context.Context, tx *sql.Tx, user *entit
 		return
 	}
 
-	rowsAffected, err := result.RowsAffected()
+	err = result.Scan(&user.ID)
 	if err != nil {
 		return
 	}
 
-	if rowsAffected == 1 {
-		return
-	}
-
-	return
+	return user.ID, nil
 }
 
 func (r *UserRepositoryImpl) GetOneUserByUniqueField(ctx context.Context, field string, value any) (user *entities.Users, err error) {

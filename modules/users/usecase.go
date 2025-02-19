@@ -61,7 +61,6 @@ func (u *UsecaseImpl) Registration(ctx context.Context, param *dto.UserRegistrat
 		NationalityID: param.NationalityID,
 		PhoneNumber:   param.PhoneNumber,
 		CreatedAt:     *date.CurrentUTCTime(),
-		Balance:       0,
 	}
 
 	err = u.repository.Registration(ctx, user)
