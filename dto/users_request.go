@@ -9,13 +9,3 @@ type UserRegistration struct {
 	NationalityID string `json:"nik" validate:"required"`
 	PhoneNumber   string `json:"no_hp" validate:"required"`
 }
-
-type Credit struct {
-	BankAccountNumber string  `json:"no_rekening" validate:"required"`
-	Amount            float64 `json:"nominal" validate:"required"`
-}
-
-type Debit struct {
-	BankAccountNumber string  `json:"no_rekening" validate:"required"`
-	Amount            float64 `json:"nominal" validate:"required"`
-}

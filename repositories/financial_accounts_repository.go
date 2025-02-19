@@ -16,7 +16,7 @@ import (
 
 type FinancialAccountRepository interface {
 	GetOneByUniqueField(ctx context.Context, field string, value any) (user *entities.FinancialAccount, err error)
-	Credit(ctx context.Context, bankAccountNumber string, amount float64) (err error)
+	Credit(ctx context.Context, bankAccountNumber string, totalAmount float64) (err error)
 	// Debit(ctx context.Context, tx *sql.Tx, bankAccountNumber string, amount int64) (err error)
 
 	Update(ctx context.Context, tx *sql.Tx, column_name string, uniqueField any, updateFields map[string]any) (err error)
@@ -52,24 +52,14 @@ func (r *FinancialAccountRepositoryImpl) Credit(ctx context.Context, bankAccount
 		tx.Commit()
 	}()
 
-	command := fmt.Sprintf(`
-        UPDATE %s 
-        SET balance = $1 
-        WHERE bank_account_number = $2
-    `, r.tableName)
-
-	result, err := tx.ExecContext(ctx, command, totalAmount, bankAccountNumber)
+	updatedField := map[string]any{"balance": totalAmount}
+	err = r.Update(ctx, tx, "bank_account_number", bankAccountNumber, updatedField)
 	if err != nil {
-		r.logger.WithField("log", ctx.Value(constants.LogContextKey)).Error(err)
-		return exceptions.ErrInternalServerError
-	}
-
-	rowsAffected, _ := result.RowsAffected()
-	if rowsAffected == 0 {
-		return exceptions.ErrNotFound
+		return
 	}
 
 	return nil
+
 }
 
 func (r *FinancialAccountRepositoryImpl) GetOneByUniqueField(ctx context.Context, field string, value any) (financialAccount *entities.FinancialAccount, err error) {

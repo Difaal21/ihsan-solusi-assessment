@@ -63,32 +63,33 @@ func (handler *HTTPHandler) Credit(c echo.Context) error {
 
 	return responses.REST(c, handler.usecase.Credit(ctx, payload))
 }
-func (handler *HTTPHandler) Debit(c echo.Context) error {
-	var ctx = c.Request().Context()
-	var payload *dto.Credit
 
-	logId, _ := uuid.NewV7()
-	ctx = context.WithValue(ctx, constants.LogContextKey, logId)
+// func (handler *HTTPHandler) Debit(c echo.Context) error {
+// 	var ctx = c.Request().Context()
+// 	var payload *dto.Credit
 
-	defer func() {
-		r := recover()
-		if r != nil {
-			handler.logger.WithField("log", ctx.Value(constants.LogContextKey)).Error(r)
-			httpResponse.InternalServerError("").SetData(r).SetMessage(messages.Common["internal_server_error"]).Send()
-			responses.REST(c, httpResponse)
-			return
-		}
-	}()
+// 	logId, _ := uuid.NewV7()
+// 	ctx = context.WithValue(ctx, constants.LogContextKey, logId)
 
-	if err := c.Bind(&payload); err != nil {
-		httpResponse.UnprocessableEntity("").SetData(nil).SetMessage(messages.Common["unprocessible_entity"]).Send()
-		return responses.REST(c, httpResponse)
-	}
+// 	defer func() {
+// 		r := recover()
+// 		if r != nil {
+// 			handler.logger.WithField("log", ctx.Value(constants.LogContextKey)).Error(r)
+// 			httpResponse.InternalServerError("").SetData(r).SetMessage(messages.Common["internal_server_error"]).Send()
+// 			responses.REST(c, httpResponse)
+// 			return
+// 		}
+// 	}()
 
-	if err := validation.RequestBody(handler.validate, payload); err != nil {
-		httpResponse.BadRequest("").SetData(err).SetMessage(messages.Common["invalid_request"]).Send()
-		return responses.REST(c, httpResponse)
-	}
+// 	if err := c.Bind(&payload); err != nil {
+// 		httpResponse.UnprocessableEntity("").SetData(nil).SetMessage(messages.Common["unprocessible_entity"]).Send()
+// 		return responses.REST(c, httpResponse)
+// 	}
 
-	return responses.REST(c, handler.usecase.Debit(ctx, payload))
-}
+// 	if err := validation.RequestBody(handler.validate, payload); err != nil {
+// 		httpResponse.BadRequest("").SetData(err).SetMessage(messages.Common["invalid_request"]).Send()
+// 		return responses.REST(c, httpResponse)
+// 	}
+
+// 	return responses.REST(c, handler.usecase.Debit(ctx, payload))
+// }

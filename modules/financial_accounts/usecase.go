@@ -14,7 +14,7 @@ import (
 
 type Usecase interface {
 	Credit(ctx context.Context, param *dto.Credit) responses.Responses
-	Debit(ctx context.Context, param *dto.Credit) responses.Responses
+	// Debit(ctx context.Context, param *dto.Credit) responses.Responses
 }
 
 type UsecaseImpl struct {
@@ -34,8 +34,7 @@ func (u *UsecaseImpl) Credit(ctx context.Context, param *dto.Credit) responses.R
 	financialAccount, err := u.repository.GetOneByUniqueField(ctx, "fa.bank_account_number", param.BankAccountNumber)
 	if err != nil {
 		if err == exceptions.ErrNotFound {
-			u.logger.WithField("log", ctx.Value(constants.LogContextKey)).Error(err)
-			return httpResponse.NotFound("").SetData(exceptions.LogError{ID: ctx.Value(constants.LogContextKey)}).SetMessage(messages.Common["not_found"]).Send()
+			return httpResponse.BadRequest("").SetData(nil).SetMessage(messages.Common["not_found"]).Send()
 		}
 		u.logger.WithField("log", ctx.Value(constants.LogContextKey)).Error(err)
 		return httpResponse.InternalServerError("").SetData(exceptions.LogError{ID: ctx.Value(constants.LogContextKey)}).SetMessage(messages.Common["internal_server_error"]).Send()
@@ -52,7 +51,29 @@ func (u *UsecaseImpl) Credit(ctx context.Context, param *dto.Credit) responses.R
 	return httpResponse.Ok("").SetData(nil).SetMessage("").Send()
 }
 
-func (u *UsecaseImpl) Debit(ctx context.Context, param *dto.Credit) responses.Responses {
+// func (u *UsecaseImpl) Debit(ctx context.Context, param *dto.Credit) responses.Responses {
 
-	return httpResponse.Ok("").SetData(nil).SetMessage("").Send()
-}
+// 	financialAccount, err := u.repository.GetOneByUniqueField(ctx, "fa.bank_account_number", param.BankAccountNumber)
+// 	if err != nil {
+// 		if err == exceptions.ErrNotFound {
+// 			return httpResponse.BadRequest("").SetData(nil).SetMessage(messages.Common["not_found"]).Send()
+// 		}
+// 		u.logger.WithField("log", ctx.Value(constants.LogContextKey)).Error(err)
+// 		return httpResponse.InternalServerError("").SetData(exceptions.LogError{ID: ctx.Value(constants.LogContextKey)}).SetMessage(messages.Common["internal_server_error"]).Send()
+// 	}
+
+// 	totalAmount := financialAccount.Balance - param.Amount
+
+// 	if totalAmount < 0 {
+// 		return httpResponse.BadRequest("").SetData(nil).SetMessage("").Send()
+// 	}
+
+// 	err = u.repository.Debit(ctx, param.BankAccountNumber, totalAmount)
+// 	if err != nil {
+// 		u.logger.WithField("log", ctx.Value(constants.LogContextKey)).Error(err)
+
+// 		return httpResponse.InternalServerError("").SetData(exceptions.LogError{ID: ctx.Value(constants.LogContextKey)}).SetMessage(messages.Common["internal_server_error"]).Send()
+// 	}
+
+// 	return httpResponse.Ok("").SetData(nil).SetMessage("").Send()
+// }
