@@ -44,7 +44,7 @@ func (cfg *Config) postgreSQL() {
 	maxIdleConnections, _ := strconv.Atoi(os.Getenv("POSTGRESQL_MAX_IDLE_CONNECTIONS"))
 
 	connVal := url.Values{}
-	connVal.Add("sslmode", "require")
+	connVal.Add("sslmode", "POSTGRESQL_SSLMODE")
 	connVal.Add("TimeZone", "Asia/Jakarta")
 
 	dataSource := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", username, password, host, port, database)
