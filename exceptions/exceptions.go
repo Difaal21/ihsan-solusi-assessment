@@ -7,4 +7,5 @@ var (
 	ErrInternalServerError = errors.New("internal server error")
 	ErrInvalidCredential   = errors.New("invalid credential")
 	ErrConflict            = errors.New("conflict")
+	ErrInsufficientBalance = errors.New("insufficient balance")
 )

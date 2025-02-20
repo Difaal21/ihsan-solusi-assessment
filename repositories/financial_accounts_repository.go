@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"difaal21/ihsan-solusi-assessment/constants"
+	"difaal21/ihsan-solusi-assessment/dto"
 	"difaal21/ihsan-solusi-assessment/entities"
 	"difaal21/ihsan-solusi-assessment/exceptions"
 	"fmt"
@@ -16,7 +17,8 @@ import (
 
 type FinancialAccountRepository interface {
 	GetOneByUniqueField(ctx context.Context, field string, value any) (user *entities.FinancialAccount, err error)
-	UpdateBalance(ctx context.Context, bankAccountNumber string, totalAmount float64) (err error)
+	Credit(ctx context.Context, param *dto.Credit) (err error)
+	Debit(ctx context.Context, param *dto.Debit) (err error)
 
 	Update(ctx context.Context, tx *sql.Tx, column_name string, uniqueField any, updateFields map[string]any) (err error)
 	Insert(ctx context.Context, tx *sql.Tx, financialAccount *entities.FinancialAccount) (id int64, err error)
@@ -36,7 +38,7 @@ func NewFinancialAccountRepository(logger *logrus.Logger, db *sql.DB) FinancialA
 	}
 }
 
-func (r *FinancialAccountRepositoryImpl) UpdateBalance(ctx context.Context, bankAccountNumber string, totalAmount float64) (err error) {
+func (r *FinancialAccountRepositoryImpl) Credit(ctx context.Context, param *dto.Credit) (err error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		r.logger.WithField("log", ctx.Value(constants.LogContextKey)).Error(err)
@@ -51,14 +53,83 @@ func (r *FinancialAccountRepositoryImpl) UpdateBalance(ctx context.Context, bank
 		tx.Commit()
 	}()
 
+	financialAccount, err := r.GetOneByUniqueFieldWithLock(ctx, "bank_account_number", param.BankAccountNumber)
+	if err != nil {
+		r.logger.WithField("log", ctx.Value(constants.LogContextKey)).Error(err)
+		return
+	}
+
+	totalAmount := financialAccount.Balance + param.Amount
 	updatedField := map[string]any{"balance": totalAmount}
-	err = r.Update(ctx, tx, "bank_account_number", bankAccountNumber, updatedField)
+	err = r.Update(ctx, tx, "bank_account_number", param.BankAccountNumber, updatedField)
 	if err != nil {
 		return
 	}
 
 	return nil
+}
 
+func (r *FinancialAccountRepositoryImpl) Debit(ctx context.Context, param *dto.Debit) (err error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		r.logger.WithField("log", ctx.Value(constants.LogContextKey)).Error(err)
+		return
+	}
+
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+			return
+		}
+		tx.Commit()
+	}()
+
+	financialAccount, err := r.GetOneByUniqueFieldWithLock(ctx, "bank_account_number", param.BankAccountNumber)
+	if err != nil {
+		r.logger.WithField("log", ctx.Value(constants.LogContextKey)).Error(err)
+		return
+	}
+
+	totalAmount := financialAccount.Balance - param.Amount
+	if totalAmount < 0 {
+		return exceptions.ErrInsufficientBalance
+	}
+
+	updatedField := map[string]any{"balance": totalAmount}
+	err = r.Update(ctx, tx, "bank_account_number", param.BankAccountNumber, updatedField)
+	if err != nil {
+		return
+	}
+
+	return nil
+}
+
+func (r *FinancialAccountRepositoryImpl) GetOneByUniqueFieldWithLock(ctx context.Context, field string, value any) (financialAccount *entities.FinancialAccount, err error) {
+
+	q := buildFinancialAccountQuery()
+
+	if field != "" && value != "" {
+		q.Apply(sm.Where(psql.Raw(field).EQ(psql.Arg(value))))
+	}
+
+	q.Apply(sm.ForUpdate("fa"))
+
+	query, args, err := q.Build(ctx)
+	if err != nil {
+		r.logger.WithFields(logrus.Fields{"log": ctx.Value(constants.LogContextKey), "query": query}).Error(err)
+		return
+	}
+
+	row := r.db.QueryRowContext(ctx, query, args...)
+	financialAccount, err = scanFinancialAccount(row)
+	if err != nil {
+		if err == exceptions.ErrNotFound {
+			return
+		}
+		r.logger.WithFields(logrus.Fields{"log": ctx.Value(constants.LogContextKey), "query": query}).Error(err)
+		return
+	}
+	return
 }
 
 func (r *FinancialAccountRepositoryImpl) GetOneByUniqueField(ctx context.Context, field string, value any) (financialAccount *entities.FinancialAccount, err error) {

@@ -31,19 +31,12 @@ func NewUseCase(logger *logrus.Logger, repo repositories.FinancialAccountReposit
 
 func (u *UsecaseImpl) Credit(ctx context.Context, param *dto.Credit) responses.Responses {
 
-	financialAccount, err := u.repository.GetOneByUniqueField(ctx, "fa.bank_account_number", param.BankAccountNumber)
+	err := u.repository.Credit(ctx, param)
 	if err != nil {
 		if err == exceptions.ErrNotFound {
 			return httpResponse.BadRequest("").SetData(nil).SetMessage(messages.Common["not_found"]).Send()
 		}
-		u.logger.WithField("log", ctx.Value(constants.LogContextKey)).Error(err)
-		return httpResponse.InternalServerError("").SetData(exceptions.LogError{ID: ctx.Value(constants.LogContextKey)}).SetMessage(messages.Common["internal_server_error"]).Send()
-	}
 
-	totalAmount := financialAccount.Balance + param.Amount
-
-	err = u.repository.UpdateBalance(ctx, param.BankAccountNumber, totalAmount)
-	if err != nil {
 		u.logger.WithField("log", ctx.Value(constants.LogContextKey)).Error(err)
 		return httpResponse.InternalServerError("").SetData(exceptions.LogError{ID: ctx.Value(constants.LogContextKey)}).SetMessage(messages.Common["internal_server_error"]).Send()
 	}
@@ -53,24 +46,17 @@ func (u *UsecaseImpl) Credit(ctx context.Context, param *dto.Credit) responses.R
 
 func (u *UsecaseImpl) Debit(ctx context.Context, param *dto.Debit) responses.Responses {
 
-	financialAccount, err := u.repository.GetOneByUniqueField(ctx, "fa.bank_account_number", param.BankAccountNumber)
+	err := u.repository.Debit(ctx, param)
 	if err != nil {
 		if err == exceptions.ErrNotFound {
 			return httpResponse.BadRequest("").SetData(nil).SetMessage(messages.Common["not_found"]).Send()
 		}
+
+		if err == exceptions.ErrInsufficientBalance {
+			return httpResponse.BadRequest("").SetData(nil).SetMessage(messages.Users["insuficient_balance"]).Send()
+		}
+
 		u.logger.WithField("log", ctx.Value(constants.LogContextKey)).Error(err)
-		return httpResponse.InternalServerError("").SetData(exceptions.LogError{ID: ctx.Value(constants.LogContextKey)}).SetMessage(messages.Common["internal_server_error"]).Send()
-	}
-
-	totalAmount := financialAccount.Balance - param.Amount
-	if totalAmount < 0 {
-		return httpResponse.BadRequest("").SetData(nil).SetMessage(messages.Users["insuficient_balance"]).Send()
-	}
-
-	err = u.repository.UpdateBalance(ctx, param.BankAccountNumber, totalAmount)
-	if err != nil {
-		u.logger.WithField("log", ctx.Value(constants.LogContextKey)).Error(err)
-
 		return httpResponse.InternalServerError("").SetData(exceptions.LogError{ID: ctx.Value(constants.LogContextKey)}).SetMessage(messages.Common["internal_server_error"]).Send()
 	}
 
