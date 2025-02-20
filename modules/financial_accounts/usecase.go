@@ -15,6 +15,7 @@ import (
 type Usecase interface {
 	Credit(ctx context.Context, param *dto.Credit) responses.Responses
 	Debit(ctx context.Context, param *dto.Debit) responses.Responses
+	CheckBalance(ctx context.Context, param *dto.CheckBalance) responses.Responses
 }
 
 type UsecaseImpl struct {
@@ -27,6 +28,22 @@ func NewUseCase(logger *logrus.Logger, repo repositories.FinancialAccountReposit
 		logger:     logger,
 		repository: repo,
 	}
+}
+
+func (u *UsecaseImpl) CheckBalance(ctx context.Context, param *dto.CheckBalance) responses.Responses {
+
+	financialAccount, err := u.repository.GetOneByUniqueField(ctx, "fa.bank_account_number", param.BankAccountNumber)
+	if err != nil {
+		if err == exceptions.ErrNotFound {
+			return httpResponse.BadRequest("").SetData(nil).SetMessage(messages.Common["not_found"]).Send()
+		}
+
+		u.logger.WithField("log", ctx.Value(constants.LogContextKey)).Error(err)
+		return httpResponse.InternalServerError("").SetData(exceptions.LogError{ID: ctx.Value(constants.LogContextKey)}).SetMessage(messages.Common["internal_server_error"]).Send()
+	}
+
+	result := dto.NewCheckBalanceResponse(financialAccount.BankAccountNumber, financialAccount.Balance)
+	return httpResponse.Ok("").SetData(result).SetMessage("").Send()
 }
 
 func (u *UsecaseImpl) Credit(ctx context.Context, param *dto.Credit) responses.Responses {
