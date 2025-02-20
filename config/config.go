@@ -40,11 +40,12 @@ func (cfg *Config) postgreSQL() {
 	username := os.Getenv("POSTGRESQL_USERNAME")
 	password := os.Getenv("POSTGRESQL_PASSWORD")
 	database := os.Getenv("POSTGRESQL_DATABASE")
+	sslmode := os.Getenv("POSTGRESQL_SSLMODE")
 	maxOpenConnections, _ := strconv.Atoi(os.Getenv("POSTGRESQL_MAX_OPEN_CONNECTIONS"))
 	maxIdleConnections, _ := strconv.Atoi(os.Getenv("POSTGRESQL_MAX_IDLE_CONNECTIONS"))
 
 	connVal := url.Values{}
-	connVal.Add("sslmode", "POSTGRESQL_SSLMODE")
+	connVal.Add("sslmode", sslmode)
 	connVal.Add("TimeZone", "Asia/Jakarta")
 
 	dataSource := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", username, password, host, port, database)
