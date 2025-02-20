@@ -17,7 +17,7 @@ import (
 
 type UserRepository interface {
 	GetOneUserByUniqueField(ctx context.Context, field string, value any) (user *entities.Users, err error)
-	Registration(ctx context.Context, users *entities.Users) (err error)
+	Registration(ctx context.Context, users *entities.Users) (financialAccount *entities.FinancialAccount, err error)
 
 	Update(ctx context.Context, tx *sql.Tx, tableName string, id int64, updateFields map[string]any) (err error)
 	Insert(ctx context.Context, tx *sql.Tx, users *entities.Users) (id int64, err error)
@@ -44,7 +44,7 @@ func generateBankAccountNumber() string {
 	return fmt.Sprintf("%012d", accountNumber)
 }
 
-func (r *UserRepositoryImpl) Registration(ctx context.Context, user *entities.Users) (err error) {
+func (r *UserRepositoryImpl) Registration(ctx context.Context, user *entities.Users) (financialAccount *entities.FinancialAccount, err error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		r.logger.WithField("log", ctx.Value(constants.LogContextKey)).Error(err)
@@ -70,7 +70,7 @@ func (r *UserRepositoryImpl) Registration(ctx context.Context, user *entities.Us
 		return
 	}
 
-	financialAccount := &entities.FinancialAccount{
+	financialAccount = &entities.FinancialAccount{
 		UserID:            userId,
 		Balance:           0,
 		BankAccountNumber: generateBankAccountNumber(),

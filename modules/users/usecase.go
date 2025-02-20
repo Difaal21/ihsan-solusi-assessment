@@ -63,11 +63,12 @@ func (u *UsecaseImpl) Registration(ctx context.Context, param *dto.UserRegistrat
 		CreatedAt:     *date.CurrentUTCTime(),
 	}
 
-	err = u.repository.Registration(ctx, user)
+	financialAccount, err := u.repository.Registration(ctx, user)
 	if err != nil {
 		u.logger.WithField("log", ctx.Value(constants.LogContextKey)).Error(err)
 		return httpResponse.InternalServerError("").SetData(exceptions.LogError{ID: ctx.Value(constants.LogContextKey)}).SetMessage(messages.Common["internal_server_error"]).Send()
 	}
 
-	return httpResponse.Ok("").SetData(nil).SetMessage("").Send()
+	result := dto.NewUserRegistrationReponse(financialAccount.BankAccountNumber)
+	return httpResponse.Ok("").SetData(result).SetMessage("").Send()
 }
