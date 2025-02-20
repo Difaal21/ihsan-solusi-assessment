@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+
+  postgresql:
+    image: postgres:14-alpine
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=root
+      - POSTGRES_DB=ihsan_solusi_assessment
+    ports:
+      - "5432:5432"
+    networks:
+      - ihsan-solusi-network
+
+  ihsan_solusi_assessment:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - POSTGRESQL_HOST=postgresql
+      - POSTGRESQL_PORT=5432
+      - POSTGRESQL_USERNAME=root
+      - POSTGRESQL_PASSWORD=root
+      - POSTGRESQL_DATABASE=ihsan_solusi_assessment
+      - POSTGRESQL_MAX_OPEN_CONNECTIONS=20
+      - POSTGRESQL_MAX_IDLE_CONNECTIONS=5
+      - POSTGRESQL_SSLMODE=disable
+    depends_on:
+      - postgresql
+    networks:
+      - ihsan-solusi-network
+
+networks:
+  ihsan-solusi-network:
+    driver: bridge
